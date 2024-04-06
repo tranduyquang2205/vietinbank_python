@@ -23,7 +23,7 @@ def get_balance_api(input: LoginDetails):
         vtb = VTB(input.username, input.password, input.account_number)
         response = vtb.do_login()
         if response['success']:
-            balance = vtb.get_balance(account_number)
+            balance = vtb.get_balance(input.account_number)
             return balance
         else:
             return response
@@ -41,7 +41,7 @@ def get_transactions_api(input: Transactions):
         vtb = VTB(input.username, input.password, input.account_number)
         response = vtb.do_login()
         if response['success']:
-            transaction = vtb.get_transaction(limit,start_date, end_date)
+            transaction = vtb.get_transaction(input.limit,input.from_date, input.to_date)
             return transaction
         else:
             return response
