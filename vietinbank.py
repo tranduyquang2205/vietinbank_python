@@ -135,11 +135,17 @@ class VTB:
                 'success': False,
                 'message': login['errorMessage']
             }
-        else:
+        elif 'errorMessage' in login:
             return {
                 'code': 400,
                 'success': False,
                 'message': login['errorMessage'],
+            }
+        else:
+            return {
+                'code': 500,
+                'success': False,
+                'message': 'Internal Server Error!',
             }
     def get_balance(self,account_number):
         if not self.is_login:
@@ -285,7 +291,7 @@ class VTB:
             headers["sessionId"] = self.session_id
         return headers
 
-# username = "0704527533"
+# username = "07045275331"
 # password = "Hung6699"
 # account_number = "104881147832"
 # from_date = "2024-04-12"
