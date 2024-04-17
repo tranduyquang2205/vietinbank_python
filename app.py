@@ -4,6 +4,9 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import uvicorn
 from vietinbank import VTB
+import sys
+import traceback
+from api_response import APIResponse
 
 
 app = FastAPI()
@@ -16,19 +19,27 @@ class LoginDetails(BaseModel):
     account_number: str
 @app.post('/login', tags=["login"])
 def login_api(input: LoginDetails):
+    try:
         vtb = VTB(input.username, input.password, input.account_number)
         response = vtb.do_login()
-        return response
+        return APIResponse.json_format(response)
+    except Exception as e:
+        response = str(e)
+        print(traceback.format_exc())
+        print(sys.exc_info()[2])
+        return APIResponse.json_format(response)
 
 @app.post('/get_balance', tags=["get_balance"])
 def get_balance_api(input: LoginDetails):
+    try:
         vtb = VTB(input.username, input.password, input.account_number)
-        response = vtb.do_login()
-        if response['success']:
-            balance = vtb.get_balance(input.account_number)
-            return balance
-        else:
-            return response
+        balance = vtb.get_balance(input.account_number)
+        return APIResponse.json_format(balance)
+    except Exception as e:
+        response = str(e)
+        print(traceback.format_exc())
+        print(sys.exc_info()[2])
+        return APIResponse.json_format(response)
     
 class Transactions(BaseModel):
     username: str
@@ -40,13 +51,15 @@ class Transactions(BaseModel):
     
 @app.post('/get_transactions', tags=["get_transactions"])
 def get_transactions_api(input: Transactions):
+    try:
         vtb = VTB(input.username, input.password, input.account_number)
-        response = vtb.do_login()
-        if response['success']:
-            transaction = vtb.get_transaction(input.limit,input.from_date, input.to_date)
-            return transaction
-        else:
-            return response
+        transaction = vtb.get_transaction(input.limit,input.from_date, input.to_date)
+        return APIResponse.json_format(transaction)
+    except Exception as e:
+        response = str(e)
+        print(traceback.format_exc())
+        print(sys.exc_info()[2])
+        return APIResponse.json_format(response)
 
 
 if __name__ == "__main__":

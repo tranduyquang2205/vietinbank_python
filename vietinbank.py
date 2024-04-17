@@ -44,7 +44,8 @@ class VTB:
         self.bsb = None
         self.account_type = None
         self.currency_code = None
-
+        self.is_login = False
+        
     def save_data(self):
         data = {
             'username': self.username,
@@ -106,7 +107,6 @@ class VTB:
         body = self.make_body_request_json(params)
         response = requests.post(self.url['login'], headers=headers, data=body, timeout=self.timeout)
         login = response.json()
-        print(login)
         if not login['error']:
             self.session_id = login['sessionId']
             self.customer_number = login['customerNumber']
@@ -118,27 +118,55 @@ class VTB:
             self.currency_code = info['accounts'][0]['currencyCode']
             self.save_data()
             return {
+                'code': 200,
                 'success': True,
-                'message': 'success',
+                'message': 'Đăng nhập thành công',
                 'data': login
+            }
+        elif 'errorMessage' in login and 'sai tên đăng nhập hoặc mật khẩu' in login['errorMessage']:
+            return {
+                'code': 444,
+                'success': False,
+                'message': login['errorMessage']
+            }
+        elif 'errorMessage' in login and 'bị khóa' in login['errorMessage']:
+            return {
+                'code': 408,
+                'success': False,
+                'message': login['errorMessage']
             }
         else:
             return {
+                'code': 400,
                 'success': False,
-                'message': login['message'],
-                'data': login
+                'message': login['errorMessage'],
             }
     def get_balance(self,account_number):
+        if not self.is_login:
+            login = self.do_login()
+            if not login['success']:
+                return login
         arr = self.get_entities_and_accounts()
         if arr['accounts']:
             amount = 0
             for v in arr['accounts']:
                 if v['number'] == account_number:
                     amount = v['accountState']['availableBalance']
-                    break
-            return {'status': 1, 'amount': amount}
-        else:
-            return {'status': 0, 'data': arr}
+                    if int(amount) < 0:
+                        return {'code':448,'success': False, 'message': 'Blocked account with negative balances!',
+                                'data': {
+                                    'balance':int(amount)
+                                }
+                                }
+                    else:
+                        return {'code':200,'success': True, 'message': 'Thành công',
+                                'data':{
+                                    'account_number':self.account_number,
+                                    'balance':int(amount)
+                        }}
+            return {'code':404,'success': False, 'message': 'account_number not found!'} 
+        else: 
+            return {'code':520 ,'success': False, 'message': 'Unknown Error!'} 
     def get_entities_and_accounts(self):
         self.request_id = self.generate_request_id()
         params = {
@@ -150,6 +178,10 @@ class VTB:
         response = requests.post(self.url['getEntitiesAndAccounts'], headers=headers, data=body, timeout=self.timeout)
         return response.json()
     def get_transaction(self, limit,start_date, end_date):
+        if not self.is_login:
+            login = self.do_login()
+            if not login['success']:
+                return login
         self.request_id = self.generate_request_id()
         params = {
         'accountNumber': self.account_number,
@@ -167,7 +199,29 @@ class VTB:
         headers = self.header_null()
         body = self.make_body_request_json(params)
         response = requests.post(self.url['getHistTransactions'], headers=headers, data=body, timeout=self.timeout)
-        return response.json()
+        if response.status_code == 401:
+            return {'code':401,'success': False, 'message': 'Unauthorized!'}
+        
+        if response.status_code != 200:
+            return {'code':response.status_code,'success': False, 'message': 'Unknown error!'}
+        try:
+            result = response.json()
+        except json.decoder.JSONDecodeError:
+            result = {
+                "status" : "500"
+            }
+        if 'error' in result:  
+            if not result['error'] and 'transactions' in result:
+                return {'code':200,'success': True, 'message': 'Thành công',
+                            'data':{
+                                'transactions':result['transactions'],
+                    }}
+            elif result['error'] and 'errorMessage' in result and 'vượt quá số lượt' in result['errorMessage']:
+                return {'code':429,'success': False, 'message': 'Too Many Requests!'}
+            else:
+                return {'code':400,'success': False, 'message': result['errorMessage']}
+        else:
+            return {'code':520 ,'success': False, 'message': 'Unknown Error!'} 
 
     # Add other methods following the same pattern
     def build_query_string(self,params):
@@ -230,3 +284,18 @@ class VTB:
         if self.session_id:
             headers["sessionId"] = self.session_id
         return headers
+
+# username = "0704527533"
+# password = "Hung6699"
+# account_number = "104881147832"
+# from_date = "2024-04-12"
+# to_date = "2024-04-12"
+# limit = 10
+
+# vtb = VTB(username, password, account_number)
+# response = vtb.do_login()
+# print(response)
+# balance = vtb.get_balance(account_number)
+# print(balance)
+# transaction = vtb.get_transaction(limit,from_date, to_date)
+# print(transaction)
