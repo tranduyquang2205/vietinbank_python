@@ -238,7 +238,7 @@ class VTB:
             params['sessionId'] = self.session_id
         return self.encrypt_data(params)
     def encrypt_data(self, data):
-        url = "https://encrypt.pay2world.org/api.php?act=encrypt_viettin"
+        url = "https://babygroupvip.com/encrypt/api.php?act=encrypt_viettin"
 
         payload = json.dumps(data)
         headers = {
