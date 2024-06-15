@@ -158,10 +158,18 @@ class VTB:
             for v in arr['accounts']:
                 if v['number'] == account_number:
                     amount = v['accountState']['availableBalance']
+                    total_balance = v['accountState']['balance']
                     if int(amount) < 0:
                         return {'code':448,'success': False, 'message': 'Blocked account with negative balances!',
                                 'data': {
                                     'balance':int(amount)
+                                }
+                                }
+                    elif int(amount) == 0 and int(total_balance) > int(amount):
+                                return {'code':449,'success': False, 'message': 'Blocked account!',
+                                'data': {
+                                    'balance':int(amount),
+                                    'total_balance':int(total_balance)
                                 }
                                 }
                     else:
