@@ -107,7 +107,8 @@ class VTB:
         body = self.make_body_request_json(params)
         response = requests.post(self.url['login'], headers=headers, data=body, timeout=self.timeout)
         login = response.json()
-        if not login['error']:
+        if 'error' in login and not login['error']:
+            self.is_login = True
             self.session_id = login['sessionId']
             self.customer_number = login['customerNumber']
             self.ipay_id = login['ipayId']
@@ -299,17 +300,17 @@ class VTB:
             headers["sessionId"] = self.session_id
         return headers
 
-# username = "07045275331"
-# password = "Hung6699"
-# account_number = "104881147832"
-# from_date = "2024-04-12"
-# to_date = "2024-04-12"
-# limit = 10
+username = "0886438795"
+password = "Dqxkv2205!"
+account_number = "0886438795"
+from_date = "2024-04-12"
+to_date = "2024-04-12"
+limit = 10
 
-# vtb = VTB(username, password, account_number)
-# response = vtb.do_login()
-# print(response)
-# balance = vtb.get_balance(account_number)
-# print(balance)
-# transaction = vtb.get_transaction(limit,from_date, to_date)
-# print(transaction)
+vtb = VTB(username, password, account_number)
+response = vtb.do_login()
+print(response)
+balance = vtb.get_balance(account_number)
+print(balance)
+transaction = vtb.get_transaction(limit,from_date, to_date)
+print(transaction)
