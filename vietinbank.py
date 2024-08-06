@@ -258,12 +258,11 @@ class VTB:
     #     return json.loads(response.text)
     def encrypt_data(self, data):
         """
-        https://vcbbiz1.pay2world.vip/vietcombank/encrypt_biz
-        https://tcbbcp1.pay2world.vip/vietcombank/encrypt
+
         https://encrypt1.pay2world.vip/api.php?act=encrypt_viettin
         """
         
-        url_1 = 'https://vcbbiz1.pay2world.vip/api.php?act=encrypt_viettin'
+        url_1 = 'https://encrypt1.pay2world.vip/api.php?act=encrypt_viettin'
         url_2 = 'https://babygroupvip.com/encrypt/api.php?act=encrypt_viettin'
         url_3 = 'https://vcbbiz2.pay2world.vip/api.php?act=encrypt_viettin'
         
@@ -325,17 +324,17 @@ class VTB:
             headers["sessionId"] = self.session_id
         return headers
 
-username = "0886438795"
-password = "Dqxkv2205!"
-account_number = "0886438795"
-from_date = "2024-04-12"
-to_date = "2024-04-12"
-limit = 10
+# username = "0789557558"
+# password = ""
+# account_number = "108882179799"
+# from_date = "2024-07-01"
+# to_date = "2024-07-07"
+# limit = 10
 
-vtb = VTB(username, password, account_number)
-response = vtb.do_login()
-print(response)
-balance = vtb.get_balance(account_number)
-print(balance)
-transaction = vtb.get_transaction(limit,from_date, to_date)
-print(transaction)
+# vtb = VTB(username, password, account_number)
+# response = vtb.do_login()
+# print(response)
+# balance = vtb.get_balance(account_number)
+# print(balance)
+# transaction = vtb.get_transaction(limit,from_date, to_date)
+# print(transaction)
