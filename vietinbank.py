@@ -1,3 +1,6 @@
+import os
+import time
+import uuid
 import requests
 import json
 import random
@@ -7,7 +10,7 @@ import json
 import string
 from datetime import datetime
 class VTB:
-    def __init__(self, username, password, account_number):
+    def __init__(self, username, password, account_number, proxy_list=None):
         self.url = {
             'captcha': 'https://api-ipay.vietinbank.vn/api/get-captcha/',
             'login': 'https://api-ipay.vietinbank.vn/ipay/wa/signIn',
@@ -30,26 +33,55 @@ class VTB:
         self.client_info = '127.0.0.1;MacOSProMax'
         self.timeout = 15
         self.public_key = "-----BEGIN PUBLIC KEY-----\nMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDLenQHmHpaqYX4IrRVM8H1uB21\nxWuY+clsvn79pMUYR2KwIEfeHcnZFFshjDs3D2ae4KprjkOFZPYzEWzakg2nOIUV\nWO+Q6RlAU1+1fxgTvEXi4z7yi+n0Zs0puOycrm8i67jsQfHi+HgdMxCaKzHvbECr\n+JWnLxnEl6615hEeMQIDAQAB\n-----END PUBLIC KEY-----"
-        self.session_id = None
-        self.account_number = account_number
-        self.ipay_id = None
-        self.token_id = None
-        self.username = username
-        self.access_code = password
+        
+        self.is_login = False
+        self.time_login = time.time()
+        self.file = f"data/{username}.json"
+        
         self.captcha_code = None
         self.captcha_id = None
         self.request_id = None
         self.sign = None
-        self.customer_number = None
-        self.bsb = None
-        self.account_type = None
-        self.currency_code = None
-        self.is_login = False
+
+        self.proxy_list = proxy_list
+        self.start_balance = None
+        self.new_balance = None
+        self.deviceIdentity = ""
+        if self.proxy_list:
+            self.proxy_info = random.choice(self.proxy_list)
+            proxy_host, proxy_port, username_proxy, password_proxy = self.proxy_info.split(':')
+            self.proxies = {
+                'http': f'http://{username_proxy}:{password_proxy}@{proxy_host}:{proxy_port}',
+                'https': f'http://{username_proxy}:{password_proxy}@{proxy_host}:{proxy_port}'
+            }
+        else:
+            self.proxies = None
+        if not os.path.exists(self.file):
+            self.username = username
+            self.password = password
+            self.account_number = account_number
+            self.deviceIdentity = str(uuid.uuid4())
+            self.session_id = None
+            self.ipay_id = None
+            self.token_id = None
+            self.sign = None
+            self.customer_number = None
+            self.bsb = None
+            self.account_type = None
+            self.currency_code = None
+            self.is_login = False
+            self.time_login = time.time()
+            self.save_data()
+        else:
+            self.parse_data()
+            self.username = username
+            self.password = password
+            self.account_number = account_number
         
     def save_data(self):
         data = {
             'username': self.username,
-            'password': self.access_code,
+            'password': self.password,
             'accountNumber': self.account_number,
             'sessionId': self.session_id,
             'ipayId': self.ipay_id,
@@ -58,17 +90,19 @@ class VTB:
             'currencyCode': self.currency_code,
             'bsb': self.bsb,
             'accountType': self.account_type,
+            'is_login': self.is_login,
+            'time_login': self.time_login,
+            'deviceIdentity': self.deviceIdentity
         }
-        with open(f"data/{self.username}.json", "w") as file:
+        with open(self.file, "w") as file:
             json.dump(data, file)
 
     def parse_data(self):
         try:
-            with open(f"data/{self.username}.json", "r") as file:
+            with open(self.file, "r") as file:
                 data = json.load(file)
                 self.username = data['username']
-                self.access_code = data['password']
-                self.access_code = data['password']
+                self.password = data['password']
                 self.account_number = data.get('accountNumber', '')
                 self.account_type = data.get('accountType', '')
                 self.customer_number = data.get('customerNumber', '')
@@ -77,6 +111,9 @@ class VTB:
                 self.ipay_id = data.get('ipayId', '')
                 self.session_id = data.get('sessionId', '')
                 self.currency_code = data.get('currencyCode', '')
+                self.is_login = data.get('is_login', False)
+                self.time_login = data.get('time_login', time.time()),
+                self.deviceIdentity = data.get('deviceIdentity', str(uuid.uuid4()))
         except FileNotFoundError:
             pass
 
@@ -92,11 +129,12 @@ class VTB:
         self.request_id = self.generate_request_id()
         self.get_captcha()
         params = {
-            'accessCode': self.access_code,
+            'accessCode': self.password,
             'browserInfo': self.browser_info,
             'captchaCode': self.captcha_code,
             'captchaId': self.captcha_id,
             'clientInfo': self.client_info,
+            'deviceIdentity': self.deviceIdentity,
             'lang': self.lang,
             'requestId': self.request_id,
             'userName': self.username,
@@ -105,7 +143,7 @@ class VTB:
         
         headers = self.header_null()
         body = self.make_body_request_json(params)
-        response = requests.post(self.url['login'], headers=headers, data=body, timeout=self.timeout)
+        response = requests.post(self.url['login'], headers=headers, data=body, timeout=self.timeout,proxies=self.proxies)
         login = response.json()
         if 'error' in login and not login['error']:
             self.is_login = True
@@ -190,7 +228,7 @@ class VTB:
         }
         headers = self.header_null()
         body = self.make_body_request_json(params)
-        response = requests.post(self.url['getEntitiesAndAccounts'], headers=headers, data=body, timeout=self.timeout)
+        response = requests.post(self.url['getEntitiesAndAccounts'], headers=headers, data=body, timeout=self.timeout,proxies=self.proxies)
         return response.json()
     def get_transaction(self, limit,start_date, end_date):
         if not self.is_login:
@@ -213,7 +251,7 @@ class VTB:
     }
         headers = self.header_null()
         body = self.make_body_request_json(params)
-        response = requests.post(self.url['getHistTransactions'], headers=headers, data=body, timeout=self.timeout)
+        response = requests.post(self.url['getHistTransactions'], headers=headers, data=body, timeout=self.timeout,proxies=self.proxies)
         if response.status_code == 401:
             return {'code':401,'success': False, 'message': 'Unauthorized!'}
         
@@ -324,17 +362,3 @@ class VTB:
             headers["sessionId"] = self.session_id
         return headers
 
-# username = "0789557558"
-# password = ""
-# account_number = "108882179799"
-# from_date = "2024-07-01"
-# to_date = "2024-07-07"
-# limit = 10
-
-# vtb = VTB(username, password, account_number)
-# response = vtb.do_login()
-# print(response)
-# balance = vtb.get_balance(account_number)
-# print(balance)
-# transaction = vtb.get_transaction(limit,from_date, to_date)
-# print(transaction)
